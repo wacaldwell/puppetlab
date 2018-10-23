@@ -1,5 +1,5 @@
 GEM
-  remote: https://rubygems.org/
+  remote: https://artifactory.engtools.xoom.com/artifactory/api/gems/rubygems-virtual/
   specs:
     CFPropertyList (2.3.6)
     diff-lcs (1.3)
