@@ -1,14 +1,12 @@
-# install class manages installation of ntp package
-  class ntp::install {
+#
+class ntp::install inherits ntp {
 
-    case $::kernel {
-      'Linux': {
-        package { 'ntp':
-        ensure => installed,
-      }
+  if $ntp::package_manage {
+
+    package { $ntp::package_name:
+      ensure => $ntp::package_ensure,
     }
-    default: {
-      fail("Sorry, ${::kernel} is unsupported by this ntp module!")
-    }
+
   }
+
 }

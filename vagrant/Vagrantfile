@@ -3,22 +3,23 @@
 
 Vagrant.configure(2) do |config|
 
-  config.hostmanager.enabled = true
-  config.hostmanager.ignore_private_ip = false
-  config.hostmanager.include_offline = true
+#  config.hostmanager.enabled = true
+#  config.hostmanager.ignore_private_ip = false
+#  config.hostmanager.include_offline = true
 
   config.vm.define "puppet" do |puppet|
     # Puppetmaster on CentOS 7
     config.vm.provider "virtualbox" do |v|
-      v.memory = 2048
+      v.memory = 8192
     end
     puppet.vm.synced_folder ".", "/vagrant"
-    puppet.vm.synced_folder "../code", "/puppet_code"
-    puppet.vm.synced_folder "../puppetserver", "/puppet_puppetserver"
-    puppet.vm.box = "geerlingguy/centos7"
-    puppet.vm.hostname = "puppet.example.com"
-    puppet.vm.network :private_network, ip: "10.0.20.10"
-    puppet.hostmanager.aliases = %w(puppet)
+    puppet.vm.box = "centos/7"
+    puppet.vm.hostname = "puppet.cavemanbeats"
+    puppet.vm.network :public_network, ip: "192.168.1.66"
+    puppet.vm.synced_folder '.', '/vagrant', type: 'rsync', rsync__exclude: '.git/'
+    puppet.vm.synced_folder '../code', '/puppet_code', type: 'rsync'
+    puppet.vm.synced_folder '../puppetserver', '/puppet_puppetserver', type: 'rsync'
+  #  puppet.hostmanager.aliases = %w(puppet)
     puppet.vm.provision "shell", inline: <<-SHELL
       # sudo yum update -y
       sudo rpm -ivh https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
@@ -28,7 +29,7 @@ Vagrant.configure(2) do |config|
       sudo rm -rf /etc/puppetlabs/puppetserver
       sudo ln -s /puppet_puppetserver /etc/puppetlabs/puppetserver
       sudo sed -i 's/2g/512m/g' /etc/sysconfig/puppetserver
-      echo "*.example.com" | sudo tee /etc/puppetlabs/puppet/autosign.conf
+      echo "*.cavemanbeats" | sudo tee /etc/puppetlabs/puppet/autosign.conf
       sudo /opt/puppetlabs/bin/puppetserver gem install hiera-eyaml
       sudo cp -r /vagrant/keys /etc/puppetlabs
       sudo chown puppet:puppet /etc/puppetlabs/keys/public_key.pkcs7.pem
@@ -37,33 +38,60 @@ Vagrant.configure(2) do |config|
     SHELL
   end
 
-  config.vm.define "agent1" do |agent1|
-    # Puppet agent on CentOS 7
-    agent1.vm.box = "geerlingguy/centos7"
-    agent1.vm.hostname = "agent1.example.com"
-    agent1.vm.network :private_network, ip: "10.0.20.11"
-    agent1.hostmanager.aliases = %w(agent1)
-    agent1.vm.provision "shell", inline: <<-SHELL
+  config.vm.define "base" do |base|
+    # base host on CentOS 7
+    base.vm.box = "centos/7"
+    base.vm.hostname = "base.cavemanbeats"
+    base.vm.network :public_network, ip: "192.168.1.70"
+    base.hostmanager.aliases = %w(base)
+    base.vm.provision "shell", inline: <<-SHELL
       sudo yum update -y
-      sudo rpm -ivh https://yum.puppetlabs.com/puppetlabs-release-pc1-el-7.noarch.rpm
+      sudo rpm -Uvh https://yum.puppet.com/puppet6-release-el-7.noarch.rpm
       sudo yum install puppet-agent -y
       sudo service puppet start
     SHELL
   end
 
-  config.vm.define "agent2" do |agent2|
-    # Puppet agent on Debian
-    agent2.vm.box = "ARTACK/debian-jessie"
-    agent2.vm.hostname = "agent2.example.com"
-    agent2.vm.network :private_network, ip: "10.0.20.12"
-    agent2.hostmanager.aliases = %w(agent2)
-    agent2.vm.provision "shell", inline: <<-SHELL
-      wget https://apt.puppetlabs.com/puppetlabs-release-pc1-jessie.deb
-      sudo dpkg -i puppetlabs-release-pc1-jessie.deb
-      sudo apt-get update
-      sudo apt-get install puppet-agent -y
-      sudo /opt/puppetlabs/bin/puppet agent --enable
+config.vm.define "webhost" do |webhost|
+    # base host on CentOS 7
+    webhost.vm.box = "centos/7"
+    webhost.vm.hostname = "webhost.cavemanbeats"
+    webhost.vm.network :public_network, ip: "192.168.1.150"
+    webhost.hostmanager.aliases = %w(webhost)
+    webhost.vm.provision "shell", inline: <<-SHELL
+      sudo yum update -y
+      sudo rpm -Uvh https://yum.puppet.com/puppet6-release-el-7.noarch.rpm
+      sudo yum install puppet-agent -y
       sudo service puppet start
     SHELL
   end
+
+  config.vm.define "monstack" do |monstack|
+    # monitoring stack on CentOS 7
+    monstack.vm.box = "centos/7"
+    monstack.vm.hostname = "monstack.cavemanbeats"
+    monstack.vm.network :public_network, ip: "192.168.1.60"
+    monstack.hostmanager.aliases = %w(monstack)
+    monstack.vm.provision "shell", inline: <<-SHELL
+      sudo yum update -y
+      sudo rpm -Uvh https://yum.puppet.com/puppet6-release-el-7.noarch.rpm
+      sudo yum install puppet-agent -y
+      sudo service puppet start
+    SHELL
+  end
+
+  config.vm.define "nagios" do |nagios|
+    # nagios host CentOS 7
+    nagios.vm.box = "centos/7"
+    nagios.vm.hostname = "nagios.cavemanbeats"
+    nagios.vm.network :public_network, ip: "192.168.1.80", bridge: "en0: Ethernet"
+    nagios.hostmanager.aliases = %w(nagios)
+    nagios.vm.provision "shell", inline: <<-SHELL
+      sudo yum update -y
+      sudo rpm -Uvh https://yum.puppet.com/puppet6-release-el-7.noarch.rpm
+      sudo yum install puppet-agent -y
+      sudo service puppet start
+    SHELL
+  end
+
 end
