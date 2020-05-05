@@ -1,4 +1,5 @@
-*box*
+*.box
 code
 .vagrant
 vagrant/.vagrant
+.DS*
